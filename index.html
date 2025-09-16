@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>DocVault Lite</title>
+  <link rel="stylesheet" href="styles.css" />
+  <link rel="manifest" href="manifest.json" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <link rel="apple-touch-icon" href="icons/icon-192.png" />
+  <link rel="icon" type="image/png" href="icons/icon-512.png" />
+</head>
+<body>
+  <div id="app">
+    <header>
+      <h1>📄 Mis Documentos</h1>
+      <button id="add-btn" onclick="showAddModal()">+ Añadir</button>
+    </header>
+
+    <div id="documents-container">
+      <!-- Los documentos aparecerán aquí -->
+    </div>
+
+    <footer>
+      <small>DocVault Lite — Tus documentos, siempre a mano.</small>
+    </footer>
+
+    <!-- Modal para añadir documento -->
+    <div id="add-modal" class="modal">
+      <div class="modal-content glass-card">
+        <h3>Añadir Documento</h3>
+        <label>Nombre</label>
+        <input type="text" id="doc-name" placeholder="Ej: Carnet de conducir" required />
+        <label>Fecha de vencimiento (opcional)</label>
+        <input type="date" id="doc-expiry" />
+        <label>Subir imagen o PDF</label>
+        <input type="file" id="doc-file" accept="image/*,.pdf" required />
+        <div class="modal-buttons">
+          <button onclick="closeModal()">Cancelar</button>
+          <button onclick="saveDocument()">Guardar</button>
+        </div>
+      </div>
+    </div>
+
+    <div id="modal-overlay" onclick="closeModal()"></div>
+  </div>
+
+  <script src="script.js"></script>
+</body>
+</html>
