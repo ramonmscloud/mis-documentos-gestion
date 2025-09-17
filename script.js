@@ -28,13 +28,13 @@ function saveDocument() {
 
   const reader = new FileReader();
   reader.onload = function(e) {
-    const fileData = e.target.result;
+    const fileData = e.target.result; // Base64
 
     const newDoc = {
       id: Date.now(),
       name,
       expiry: expiry || null,
-       fileData,
+      fileData, // ¡Esta es la clave correcta!
       type: file.type
     };
 
@@ -44,11 +44,16 @@ function saveDocument() {
     documents.push(newDoc);
     localStorage.setItem(STORE_KEY, JSON.stringify(documents));
 
+    // Limpiar formulario
+    document.getElementById('doc-name').value = '';
+    document.getElementById('doc-expiry').value = '';
+    fileInput.value = '';
+
     closeModal();
     loadDocuments();
   };
 
-  reader.readAsDataURL(file);
+  reader.readAsDataURL(file); // Convierte archivo a Base64
 }
 
 function loadDocuments() {
@@ -96,15 +101,42 @@ function checkExpiringSoon(documents) {
 
 function previewDocument(doc) {
   const win = window.open('', '_blank');
+  win.document.title = doc.name;
+
+  let content = '';
+
+  if (doc.type.includes('pdf')) {
+    // Para PDF: iframe con sandbox y estilo responsivo
+    content = `
+      <style>
+        body, html { margin: 0; padding: 0; height: 100%; overflow: hidden; }
+        iframe { width: 100%; height: 100%; border: none; }
+      </style>
+      <iframe src="${doc.fileData}" type="application/pdf"></iframe>
+    `;
+  } else {
+    // Para imágenes
+    content = `
+      <style>
+        body { margin: 0; display: flex; justify-content: center; align-items: center; height: 100vh; background: #000; }
+        img { max-width: 100%; max-height: 100vh; object-fit: contain; }
+      </style>
+      <img src="${doc.fileData}" alt="${doc.name}" />
+    `;
+  }
+
   win.document.write(`
+    <!DOCTYPE html>
     <html>
-      <head><title>${doc.name}</title></head>
-      <body style="margin:0; background:#f0f0f0; display:flex; justify-content:center; align-items:center; height:100vh;">
-        ${doc.type.includes('pdf') 
-          ? `<embed src="${doc.data}" type="application/pdf" width="100%" height="100%" />`
-          : `<img src="${doc.data}" style="max-width:100%; max-height:100vh; object-fit:contain;" />`
-        }
+      <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>${doc.name}</title>
+      </head>
+      <body>
+        ${content}
       </body>
     </html>
   `);
+  win.document.close();
 }
