@@ -2,6 +2,7 @@ const STORE_KEY = 'docvault_documents';
 const documentsContainer = document.getElementById('documents-container');
 const addModal = document.getElementById('add-modal');
 const modalOverlay = document.getElementById('modal-overlay');
+const fileInput = document.getElementById('doc-file'); // ¡Lo capturamos aquí!
 
 document.addEventListener('DOMContentLoaded', loadDocuments);
 
@@ -16,44 +17,63 @@ function closeModal() {
 }
 
 function saveDocument() {
-  const name = document.getElementById('doc-name').value;
-  const expiry = document.getElementById('doc-expiry').value;
-  const fileInput = document.getElementById('doc-file');
+  const nameInput = document.getElementById('doc-name');
+  const expiryInput = document.getElementById('doc-expiry');
+
+  const name = nameInput.value.trim();
+  const expiry = expiryInput.value;
   const file = fileInput.files[0];
 
-  if (!name || !file) {
-    alert('Por favor, completa todos los campos.');
+  // Validación
+  if (!name) {
+    alert('Por favor, escribe un nombre para el documento.');
+    nameInput.focus();
+    return;
+  }
+
+  if (!file) {
+    alert('Por favor, selecciona un archivo (imagen o PDF).');
+    fileInput.click(); // Vuelve a abrir selector
     return;
   }
 
   const reader = new FileReader();
+
   reader.onload = function(e) {
-    const fileData = e.target.result; // Base64
+    const fileData = e.target.result; // Base64 listo
 
     const newDoc = {
       id: Date.now(),
-      name,
+      name: name,
       expiry: expiry || null,
-      fileData, // ¡Esta es la clave correcta!
+      fileData: fileData,
       type: file.type
     };
 
+    // Cargar documentos existentes
     const stored = localStorage.getItem(STORE_KEY);
     const documents = stored ? JSON.parse(stored) : [];
 
+    // Guardar nuevo documento
     documents.push(newDoc);
     localStorage.setItem(STORE_KEY, JSON.stringify(documents));
 
     // Limpiar formulario
-    document.getElementById('doc-name').value = '';
-    document.getElementById('doc-expiry').value = '';
-    fileInput.value = '';
+    nameInput.value = '';
+    expiryInput.value = '';
+    fileInput.value = ''; // ¡IMPORTANTE! Resetear input
 
+    // Cerrar modal y recargar lista
     closeModal();
     loadDocuments();
   };
 
-  reader.readAsDataURL(file); // Convierte archivo a Base64
+  reader.onerror = function() {
+    alert('Error al leer el archivo. Intenta con otro.');
+  };
+
+  // Leer archivo como DataURL (Base64)
+  reader.readAsDataURL(file);
 }
 
 function loadDocuments() {
@@ -62,21 +82,26 @@ function loadDocuments() {
   const stored = localStorage.getItem(STORE_KEY);
   if (!stored) return;
 
-  const documents = JSON.parse(stored);
+  try {
+    const documents = JSON.parse(stored);
 
-  documents.forEach(doc => {
-    const card = document.createElement('div');
-    card.className = 'document-card';
-    card.innerHTML = `
-      <h4>${doc.name}</h4>
-      ${doc.expiry ? `<div class="expiry">Vence: ${formatDate(doc.expiry)}</div>` : ''}
-      <div style="margin-top: 10px; font-size: 0.8em;">${doc.type.includes('pdf') ? '📄 PDF' : '📷 Imagen'}</div>
-    `;
-    card.onclick = () => previewDocument(doc);
-    documentsContainer.appendChild(card);
-  });
+    documents.forEach(doc => {
+      const card = document.createElement('div');
+      card.className = 'document-card';
+      card.innerHTML = `
+        <h4>${doc.name}</h4>
+        ${doc.expiry ? `<div class="expiry">Vence: ${formatDate(doc.expiry)}</div>` : ''}
+        <div style="margin-top: 10px; font-size: 0.8em;">${doc.type.includes('pdf') ? '📄 PDF' : '📷 Imagen'}</div>
+      `;
+      card.onclick = () => previewDocument(doc);
+      documentsContainer.appendChild(card);
+    });
 
-  checkExpiringSoon(documents);
+    checkExpiringSoon(documents);
+  } catch (e) {
+    console.error("Error al cargar documentos:", e);
+    alert("Error al cargar tus documentos. Puede que el almacenamiento esté corrupto.");
+  }
 }
 
 function formatDate(dateString) {
@@ -101,21 +126,24 @@ function checkExpiringSoon(documents) {
 
 function previewDocument(doc) {
   const win = window.open('', '_blank');
+  if (!win) {
+    alert('Por favor, permite ventanas emergentes para ver el documento.');
+    return;
+  }
+
   win.document.title = doc.name;
 
   let content = '';
 
   if (doc.type.includes('pdf')) {
-    // Para PDF: iframe con sandbox y estilo responsivo
     content = `
       <style>
-        body, html { margin: 0; padding: 0; height: 100%; overflow: hidden; }
+        body, html { margin: 0; padding: 0; height: 100%; overflow: hidden; background: #f5f5f5; }
         iframe { width: 100%; height: 100%; border: none; }
       </style>
       <iframe src="${doc.fileData}" type="application/pdf"></iframe>
     `;
   } else {
-    // Para imágenes
     content = `
       <style>
         body { margin: 0; display: flex; justify-content: center; align-items: center; height: 100vh; background: #000; }
