@@ -292,69 +292,74 @@
 
     // Inicializar IndexedDB al cargar la página
     window.onload = function() {
-        console.log("Página cargada");
+    console.log("Página cargada");
 
-        // Abrir/crear la base de datos
-        const request = indexedDB.open(DB_NAME, DB_VERSION);
+    // Abrir/crear la base de datos
+    const request = indexedDB.open(DB_NAME, DB_VERSION);
 
-        request.onerror = function(event) {
-            console.error('Error al abrir IndexedDB:', event.target.errorCode);
-            showNotification('Error al inicializar la base de datos', true);
-        };
-
-        request.onsuccess = function(event) {
-            db = event.target.result;
-            console.log('IndexedDB abierto correctamente');
-            loadDocumentsList();
-            displayDocuments();
-        };
-
-        request.onupgradeneeded = function(event) {
-            db = event.target.result;
-            if (!db.objectStoreNames.contains(STORE_NAME)) {
-                const objectStore = db.createObjectStore(STORE_NAME, { keyPath: 'id' });
-                objectStore.createIndex('date', 'date', { unique: false });
-                console.log('ObjectStore creado');
-            }
-        };
-
-        // Event Listeners
-        selectFileBtn.onclick = function() {
-            fileInput.click();
-        };
-
-        fileInput.onchange = function() {
-            handleFileSelection();
-        };
-
-        uploadArea.ondragover = function(e) {
-            e.preventDefault();
-            uploadArea.style.borderColor = '#3498db';
-        };
-
-        uploadArea.ondragleave = function() {
-            uploadArea.style.borderColor = '#ccc';
-        };
-
-        uploadArea.ondrop = function(e) {
-            e.preventDefault();
-            uploadArea.style.borderColor = '#ccc';
-            if (e.dataTransfer.files.length) {
-                fileInput.files = e.dataTransfer.files;
-                handleFileSelection();
-            }
-        };
-
-        takePhotoBtn.onclick = openCamera;
-        capturePhotoBtn.onclick = capturePhoto;
-        closeCameraBtn.onclick = closeCamera;
-        createPdfBtn.onclick = saveDocument;
-        closePdfViewer.onclick = function() {
-            pdfViewer.style.display = 'none';
-            pdfFrame.src = '';
-        };
+    request.onerror = function(event) {
+        console.error('Error al abrir IndexedDB:', event.target.errorCode);
+        showNotification('Error al inicializar la base de datos', true);
     };
 
+    request.onsuccess = function(event) {
+        db = event.target.result;
+        console.log('IndexedDB abierto correctamente');
+        
+        // ✅ Cargar documentos y LUEGO mostrarlos
+        loadDocumentsList().then(() => {
+            displayDocuments();
+        }).catch(error => {
+            console.error('Error al cargar documentos:', error);
+            showNotification('Error al cargar documentos guardados', true);
+        });
+    };
+
+    request.onupgradeneeded = function(event) {
+        db = event.target.result;
+        if (!db.objectStoreNames.contains(STORE_NAME)) {
+            const objectStore = db.createObjectStore(STORE_NAME, { keyPath: 'id' });
+            objectStore.createIndex('date', 'date', { unique: false });
+            console.log('ObjectStore creado');
+        }
+    };
+
+    // Event Listeners (sin cambios)
+    selectFileBtn.onclick = function() {
+        fileInput.click();
+    };
+
+    fileInput.onchange = function() {
+        handleFileSelection();
+    };
+
+    uploadArea.ondragover = function(e) {
+        e.preventDefault();
+        uploadArea.style.borderColor = '#3498db';
+    };
+
+    uploadArea.ondragleave = function() {
+        uploadArea.style.borderColor = '#ccc';
+    };
+
+    uploadArea.ondrop = function(e) {
+        e.preventDefault();
+        uploadArea.style.borderColor = '#ccc';
+        if (e.dataTransfer.files.length) {
+            fileInput.files = e.dataTransfer.files;
+            handleFileSelection();
+        }
+    };
+
+    takePhotoBtn.onclick = openCamera;
+    capturePhotoBtn.onclick = capturePhoto;
+    closeCameraBtn.onclick = closeCamera;
+    createPdfBtn.onclick = saveDocument;
+    closePdfViewer.onclick = function() {
+        pdfViewer.style.display = 'none';
+        pdfFrame.src = '';
+    };
+};
     // Función para cargar la lista de documentos desde IndexedDB
     function loadDocumentsList() {
         return new Promise((resolve, reject) => {
