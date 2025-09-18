@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>DNI SIP etc  PDF</title>
+    <title>Gestor de Documentos PDF</title>
     <style>
         body {
             font-family: Arial, sans-serif;
@@ -230,6 +230,11 @@
         
         <div class="documents-section">
             <h2>Mis documentos</h2>
+            <div id="loadingDocuments" class="empty-state" style="display: none;">
+                <div style="margin-bottom: 15px; font-size: 24px;">⏳</div>
+                <h3>Cargando tus documentos...</h3>
+                <p>Por favor espera.</p>
+            </div>
             <div id="documentsContainer" class="documents-list">
                 <!-- Contenido generado dinámicamente -->
             </div>
@@ -246,454 +251,462 @@
     <div class="modal" id="cameraContainer">
         <span class="close-button" id="closeCameraBtn">&times;</span>
         <div class="modal-content" style="background-color: black;">
-            <video id="cameraPreview" style="width: 100%; height: 100%; object-fit: contain;" autoplay playsinline></video>
+            <video id="cameraPreview" style="width: 100%; height: 100%; object-fit: contain;" autoplay playsinline webkit-playsinline></video>
             <div style="position: absolute; bottom: 20px; left: 0; width: 100%; text-align: center;">
                 <button id="capturePhotoBtn" class="success">Capturar foto</button>
             </div>
         </div>
     </div>
     
-    <div class="loader" id="loader" style="display:none"></div>
+    <div class="loader" id="loader"></div>
     
     <div class="notification" id="notification"></div>
     
     <script>
-    // Elementos del DOM
-    const uploadArea = document.getElementById('uploadArea');
-    const fileInput = document.getElementById('fileInput');
-    const selectFileBtn = document.getElementById('selectFileBtn');
-    const takePhotoBtn = document.getElementById('takePhotoBtn');
-    const previewContainer = document.getElementById('previewContainer');
-    const imagePreview = document.getElementById('imagePreview');
-    const documentName = document.getElementById('documentName');
-    const createPdfBtn = document.getElementById('createPdfBtn');
-    const documentsContainer = document.getElementById('documentsContainer');
-    const pdfViewer = document.getElementById('pdfViewer');
-    const pdfFrame = document.getElementById('pdfFrame');
-    const closePdfViewer = document.getElementById('closePdfViewer');
-    const cameraContainer = document.getElementById('cameraContainer');
-    const cameraPreview = document.getElementById('cameraPreview');
-    const capturePhotoBtn = document.getElementById('capturePhotoBtn');
-    const closeCameraBtn = document.getElementById('closeCameraBtn');
-    const loader = document.getElementById('loader');
-    const notification = document.getElementById('notification');
+        // Elementos del DOM
+        const uploadArea = document.getElementById('uploadArea');
+        const fileInput = document.getElementById('fileInput');
+        const selectFileBtn = document.getElementById('selectFileBtn');
+        const takePhotoBtn = document.getElementById('takePhotoBtn');
+        const previewContainer = document.getElementById('previewContainer');
+        const imagePreview = document.getElementById('imagePreview');
+        const documentName = document.getElementById('documentName');
+        const createPdfBtn = document.getElementById('createPdfBtn');
+        const documentsContainer = document.getElementById('documentsContainer');
+        const pdfViewer = document.getElementById('pdfViewer');
+        const pdfFrame = document.getElementById('pdfFrame');
+        const closePdfViewer = document.getElementById('closePdfViewer');
+        const cameraContainer = document.getElementById('cameraContainer');
+        const cameraPreview = document.getElementById('cameraPreview');
+        const capturePhotoBtn = document.getElementById('capturePhotoBtn');
+        const closeCameraBtn = document.getElementById('closeCameraBtn');
+        const loader = document.getElementById('loader');
+        const notification = document.getElementById('notification');
 
-    // Variables globales
-    let currentFile = null;
-    let cameraStream = null;
-    let documentsList = []; // Lista de documentos
+        // Variables globales
+        let currentFile = null;
+        let cameraStream = null;
+        let documentsList = []; // Lista de documentos
 
-    // Nombre de la base de datos IndexedDB
-    const DB_NAME = 'PDFManagerDB';
-    const DB_VERSION = 1;
-    const STORE_NAME = 'documents';
+        // Nombre de la base de datos IndexedDB
+        const DB_NAME = 'PDFManagerDB';
+        const DB_VERSION = 1;
+        const STORE_NAME = 'documents';
 
-    let db = null;
+        let db = null;
 
-    // Inicializar IndexedDB al cargar la página
-    window.onload = function() {
-    console.log("Página cargada");
+        // Inicializar IndexedDB al cargar la página
+        window.onload = function() {
+            console.log("Página cargada");
 
-    // Abrir/crear la base de datos
-    const request = indexedDB.open(DB_NAME, DB_VERSION);
+            // Abrir/crear la base de datos
+            const request = indexedDB.open(DB_NAME, DB_VERSION);
 
-    request.onerror = function(event) {
-        console.error('Error al abrir IndexedDB:', event.target.errorCode);
-        showNotification('Error al inicializar la base de datos', true);
-    };
-
-    request.onsuccess = function(event) {
-        db = event.target.result;
-        console.log('IndexedDB abierto correctamente');
-        
-        // ✅ Cargar documentos y LUEGO mostrarlos
-        loadDocumentsList().then(() => {
-            displayDocuments();
-        }).catch(error => {
-            console.error('Error al cargar documentos:', error);
-            showNotification('Error al cargar documentos guardados', true);
-        });
-    };
-
-    request.onupgradeneeded = function(event) {
-        db = event.target.result;
-        if (!db.objectStoreNames.contains(STORE_NAME)) {
-            const objectStore = db.createObjectStore(STORE_NAME, { keyPath: 'id' });
-            objectStore.createIndex('date', 'date', { unique: false });
-            console.log('ObjectStore creado');
-        }
-    };
-
-    // Event Listeners (sin cambios)
-    selectFileBtn.onclick = function() {
-        fileInput.click();
-    };
-
-    fileInput.onchange = function() {
-        handleFileSelection();
-    };
-
-    uploadArea.ondragover = function(e) {
-        e.preventDefault();
-        uploadArea.style.borderColor = '#3498db';
-    };
-
-    uploadArea.ondragleave = function() {
-        uploadArea.style.borderColor = '#ccc';
-    };
-
-    uploadArea.ondrop = function(e) {
-        e.preventDefault();
-        uploadArea.style.borderColor = '#ccc';
-        if (e.dataTransfer.files.length) {
-            fileInput.files = e.dataTransfer.files;
-            handleFileSelection();
-        }
-    };
-
-    takePhotoBtn.onclick = openCamera;
-    capturePhotoBtn.onclick = capturePhoto;
-    closeCameraBtn.onclick = closeCamera;
-    createPdfBtn.onclick = saveDocument;
-    closePdfViewer.onclick = function() {
-        pdfViewer.style.display = 'none';
-        pdfFrame.src = '';
-    };
-};
-    // Función para cargar la lista de documentos desde IndexedDB
-    function loadDocumentsList() {
-        return new Promise((resolve, reject) => {
-            const transaction = db.transaction([STORE_NAME], 'readonly');
-            const objectStore = transaction.objectStore(STORE_NAME);
-            const request = objectStore.getAll();
+            request.onerror = function(event) {
+                console.error('Error al abrir IndexedDB:', event.target.errorCode);
+                showNotification('Error al inicializar la base de datos', true);
+            };
 
             request.onsuccess = function(event) {
-                documentsList = event.target.result.map(doc => ({
-                    id: doc.id,
-                    name: doc.name,
-                    type: doc.type,
-                    size: doc.size,
-                    date: doc.date
-                }));
-                console.log(`Cargados ${documentsList.length} documentos desde IndexedDB`);
-                resolve(documentsList);
+                db = event.target.result;
+                console.log('IndexedDB abierto correctamente');
+
+                // Mostrar indicador de carga
+                const loadingIndicator = document.getElementById('loadingDocuments');
+                loadingIndicator.style.display = 'block';
+                documentsContainer.style.display = 'none';
+
+                loadDocumentsList()
+                    .then(() => {
+                        displayDocuments();
+                    })
+                    .catch(error => {
+                        console.error('Error al cargar documentos:', error);
+                        showNotification('Error al cargar documentos guardados', true);
+                    })
+                    .finally(() => {
+                        loadingIndicator.style.display = 'none';
+                        documentsContainer.style.display = 'block';
+                    });
+            };
+
+            request.onupgradeneeded = function(event) {
+                db = event.target.result;
+                if (!db.objectStoreNames.contains(STORE_NAME)) {
+                    const objectStore = db.createObjectStore(STORE_NAME, { keyPath: 'id' });
+                    objectStore.createIndex('date', 'date', { unique: false });
+                    console.log('ObjectStore creado');
+                }
+            };
+
+            // Event Listeners
+            selectFileBtn.onclick = function() {
+                fileInput.click();
+            };
+
+            fileInput.onchange = function() {
+                handleFileSelection();
+            };
+
+            uploadArea.ondragover = function(e) {
+                e.preventDefault();
+                uploadArea.style.borderColor = '#3498db';
+            };
+
+            uploadArea.ondragleave = function() {
+                uploadArea.style.borderColor = '#ccc';
+            };
+
+            uploadArea.ondrop = function(e) {
+                e.preventDefault();
+                uploadArea.style.borderColor = '#ccc';
+                if (e.dataTransfer.files.length) {
+                    fileInput.files = e.dataTransfer.files;
+                    handleFileSelection();
+                }
+            };
+
+            takePhotoBtn.onclick = openCamera;
+            capturePhotoBtn.onclick = capturePhoto;
+            closeCameraBtn.onclick = closeCamera;
+            createPdfBtn.onclick = saveDocument;
+            closePdfViewer.onclick = function() {
+                pdfViewer.style.display = 'none';
+                pdfFrame.src = '';
+            };
+        };
+
+        // Función para cargar la lista de documentos desde IndexedDB
+        function loadDocumentsList() {
+            return new Promise((resolve, reject) => {
+                const transaction = db.transaction([STORE_NAME], 'readonly');
+                const objectStore = transaction.objectStore(STORE_NAME);
+                const request = objectStore.getAll();
+
+                request.onsuccess = function(event) {
+                    documentsList = event.target.result.map(doc => ({
+                        id: doc.id,
+                        name: doc.name,
+                        type: doc.type,
+                        size: doc.size,
+                        date: doc.date
+                    }));
+                    console.log(`Cargados ${documentsList.length} documentos desde IndexedDB`);
+                    resolve(documentsList);
+                };
+
+                request.onerror = function(event) {
+                    console.error('Error al cargar documentos:', event.target.error);
+                    reject(event.target.error);
+                };
+            });
+        }
+
+        // Función para mostrar notificaciones
+        function showNotification(message, isError = false) {
+            notification.textContent = message;
+            notification.className = isError ? 'notification error' : 'notification';
+            notification.style.display = 'block';
+
+            setTimeout(function() {
+                notification.style.display = 'none';
+            }, 3000);
+        }
+
+        // Función para manejar la selección de archivos
+        function handleFileSelection() {
+            const file = fileInput.files[0];
+            if (!file) return;
+
+            currentFile = file;
+
+            if (file.type === 'application/pdf') {
+                imagePreview.src = 'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAzODQgNTEyIj48cGF0aCBmaWxsPSIjZTc0YzNjIiBkPSJNMCAwaDM4NHY1MTJIMHoiLz48dGV4dCB4PSI1MCUiIHk9IjUwJSIgZG9taW5hbnQtYmFzZWxpbmU9Im1pZGRsZSIgdGV4dC1hbmNob3I9Im1pZGRsZSIgZm9udC1zaXplPSI4MCIgZmlsbD0id2hpdGUiPlBERjwvdGV4dD48L3N2Zz4=';
+            } else if (file.type.startsWith('image/')) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    imagePreview.src = e.target.result;
+                };
+                reader.readAsDataURL(file);
+            } else {
+                showNotification('Formato de archivo no admitido', true);
+                return;
+            }
+
+            const fileName = file.name.split('.')[0] || 'Documento';
+            const date = new Date();
+            const formattedDate = `${date.getDate()}-${date.getMonth() + 1}-${date.getFullYear()}`;
+            documentName.value = `${fileName}_${formattedDate}`;
+
+            previewContainer.style.display = 'block';
+        }
+
+        // Función para abrir la cámara
+        function openCamera() {
+            if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+                showNotification('Tu navegador no soporta el acceso a la cámara', true);
+                return;
+            }
+
+            navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } })
+                .then(function(stream) {
+                    cameraStream = stream;
+                    cameraPreview.srcObject = stream;
+                    cameraContainer.style.display = 'block';
+                })
+                .catch(function(error) {
+                    console.error('Error al acceder a la cámara:', error);
+                    showNotification('No se pudo acceder a la cámara', true);
+                });
+        }
+
+        // Función para cerrar la cámara
+        function closeCamera() {
+            if (cameraStream) {
+                cameraStream.getTracks().forEach(function(track) {
+                    track.stop();
+                });
+                cameraStream = null;
+            }
+            cameraContainer.style.display = 'none';
+        }
+
+        // Función para capturar una foto
+        function capturePhoto() {
+            if (!cameraStream) return;
+
+            const canvas = document.createElement('canvas');
+            canvas.width = cameraPreview.videoWidth;
+            canvas.height = cameraPreview.videoHeight;
+            const ctx = canvas.getContext('2d');
+            ctx.drawImage(cameraPreview, 0, 0, canvas.width, canvas.height);
+
+            const imageData = canvas.toDataURL('image/jpeg');
+            imagePreview.src = imageData;
+
+            canvas.toBlob(function(blob) {
+                currentFile = new File([blob], 'camera_photo.jpg', { type: 'image/jpeg' });
+
+                const date = new Date();
+                const formattedDate = `${date.getDate()}-${date.getMonth() + 1}-${date.getFullYear()}`;
+                documentName.value = `Foto_${formattedDate}`;
+
+                previewContainer.style.display = 'block';
+            }, 'image/jpeg');
+
+            closeCamera();
+        }
+
+        // Función para guardar un documento en IndexedDB
+        function saveDocument() {
+            if (!currentFile) {
+                showNotification('No hay ningún archivo seleccionado', true);
+                return;
+            }
+
+            const name = documentName.value.trim() || `Documento_${new Date().toLocaleDateString()}`;
+            loader.style.display = 'flex';
+
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                const fileData = e.target.result;
+
+                const docId = 'doc_' + Date.now();
+                const doc = {
+                    id: docId,
+                    name: name,
+                    type: currentFile.type,
+                    size: currentFile.size,
+                    date: new Date().toISOString(),
+                    data: fileData
+                };
+
+                const transaction = db.transaction([STORE_NAME], 'readwrite');
+                const objectStore = transaction.objectStore(STORE_NAME);
+                const request = objectStore.add(doc);
+
+                request.onsuccess = function() {
+                    console.log('Documento guardado en IndexedDB:', docId);
+                    
+                    // Recargar la lista
+                    loadDocumentsList().then(() => {
+                        displayDocuments();
+                        
+                        // Resetear interfaz
+                        previewContainer.style.display = 'none';
+                        imagePreview.src = '';
+                        documentName.value = '';
+                        currentFile = null;
+                        fileInput.value = '';
+                        
+                        showNotification('Documento guardado correctamente');
+                    });
+                };
+
+                request.onerror = function(event) {
+                    console.error('Error al guardar documento:', event.target.error);
+                    showNotification('Error al guardar: ' + event.target.error.message, true);
+                    
+                    if (event.target.error.name === 'QuotaExceededError') {
+                        showNotification('Almacenamiento lleno. Elimina documentos antes de guardar.', true);
+                    }
+                };
+
+                loader.style.display = 'none';
+            };
+
+            reader.onerror = function() {
+                console.error('Error al leer el archivo');
+                loader.style.display = 'none';
+                showNotification('Error al leer el archivo', true);
+            };
+
+            reader.readAsDataURL(currentFile);
+        }
+
+        // Función para mostrar los documentos en la interfaz
+        function displayDocuments() {
+            documentsContainer.innerHTML = '';
+
+            if (documentsList.length === 0) {
+                documentsContainer.innerHTML = `
+                    <div class="empty-state">
+                        <h3>No hay documentos</h3>
+                        <p>Sube una imagen o archivo PDF para empezar.</p>
+                    </div>
+                `;
+                return;
+            }
+
+            documentsList.sort((a, b) => new Date(b.date) - new Date(a.date));
+
+            documentsList.forEach(function(doc) {
+                const docItem = document.createElement('div');
+                docItem.className = 'document-item';
+
+                const date = new Date(doc.date);
+                const formattedDate = `${date.getDate()}-${date.getMonth() + 1}-${date.getFullYear()}`;
+                const formattedSize = formatFileSize(doc.size);
+
+                docItem.innerHTML = `
+                    <div class="document-title">${doc.name}</div>
+                    <div class="document-meta">
+                        Fecha: ${formattedDate} | Tamaño: ${formattedSize}
+                    </div>
+                    <div class="document-actions">
+                        <button onclick="viewDocument('${doc.id}')">Ver</button>
+                        <button class="success" onclick="downloadDocument('${doc.id}')">Descargar</button>
+                        <button class="danger" onclick="deleteDocument('${doc.id}')">Eliminar</button>
+                    </div>
+                `;
+
+                documentsContainer.appendChild(docItem);
+            });
+        }
+
+        // Función para ver un documento
+        function viewDocument(docId) {
+            loader.style.display = 'flex';
+
+            const transaction = db.transaction([STORE_NAME], 'readonly');
+            const objectStore = transaction.objectStore(STORE_NAME);
+            const request = objectStore.get(docId);
+
+            request.onsuccess = function(event) {
+                const doc = event.target.result;
+                if (!doc) {
+                    throw new Error('Documento no encontrado');
+                }
+
+                pdfFrame.src = doc.data;
+                pdfViewer.style.display = 'block';
+                loader.style.display = 'none';
             };
 
             request.onerror = function(event) {
-                console.error('Error al cargar documentos:', event.target.error);
-                reject(event.target.error);
+                console.error('Error al obtener documento:', event.target.error);
+                loader.style.display = 'none';
+                showNotification('Error al cargar documento', true);
             };
-        });
-    }
+        }
 
-    // No necesitamos "guardar lista" por separado — se guarda cada documento individualmente
-    // y la lista se reconstruye al cargar todos los documentos.
+        // Función para descargar un documento
+        function downloadDocument(docId) {
+            loader.style.display = 'flex';
 
-    // Función para mostrar notificaciones
-    function showNotification(message, isError = false) {
-        notification.textContent = message;
-        notification.className = isError ? 'notification error' : 'notification';
-        notification.style.display = 'block';
+            const transaction = db.transaction([STORE_NAME], 'readonly');
+            const objectStore = transaction.objectStore(STORE_NAME);
+            const request = objectStore.get(docId);
 
-        setTimeout(function() {
-            notification.style.display = 'none';
-        }, 3000);
-    }
+            request.onsuccess = function(event) {
+                const doc = event.target.result;
+                if (!doc) {
+                    throw new Error('Documento no encontrado');
+                }
 
-    // Función para manejar la selección de archivos
-    function handleFileSelection() {
-        const file = fileInput.files[0];
-        if (!file) return;
+                const extension = doc.type === 'application/pdf' ? '.pdf' : 
+                                doc.type === 'image/png' ? '.png' : '.jpg';
 
-        currentFile = file;
+                const a = document.createElement('a');
+                a.href = doc.data;
+                a.download = doc.name + extension;
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
 
-        if (file.type === 'application/pdf') {
-            imagePreview.src = 'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAzODQgNTEyIj48cGF0aCBmaWxsPSIjZTc0YzNjIiBkPSJNMCAwaDM4NHY1MTJIMHoiLz48dGV4dCB4PSI1MCUiIHk9IjUwJSIgZG9taW5hbnQtYmFzZWxpbmU9Im1pZGRsZSIgdGV4dC1hbmNob3I9Im1pZGRsZSIgZm9udC1zaXplPSI4MCIgZmlsbD0id2hpdGUiPlBERjwvdGV4dD48L3N2Zz4=';
-        } else if (file.type.startsWith('image/')) {
-            const reader = new FileReader();
-            reader.onload = function(e) {
-                imagePreview.src = e.target.result;
+                loader.style.display = 'none';
             };
-            reader.readAsDataURL(file);
-        } else {
-            showNotification('Formato de archivo no admitido', true);
-            return;
-        }
 
-        const fileName = file.name.split('.')[0] || 'Documento';
-        const date = new Date();
-        const formattedDate = `${date.getDate()}-${date.getMonth() + 1}-${date.getFullYear()}`;
-        documentName.value = `${fileName}_${formattedDate}`;
-
-        previewContainer.style.display = 'block';
-    }
-
-    // Función para abrir la cámara
-    function openCamera() {
-        if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-            showNotification('Tu navegador no soporta el acceso a la cámara', true);
-            return;
-        }
-
-        navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } })
-            .then(function(stream) {
-                cameraStream = stream;
-                cameraPreview.srcObject = stream;
-                cameraContainer.style.display = 'block';
-            })
-            .catch(function(error) {
-                console.error('Error al acceder a la cámara:', error);
-                showNotification('No se pudo acceder a la cámara', true);
-            });
-    }
-
-    // Función para cerrar la cámara
-    function closeCamera() {
-        if (cameraStream) {
-            cameraStream.getTracks().forEach(function(track) {
-                track.stop();
-            });
-            cameraStream = null;
-        }
-        cameraContainer.style.display = 'none';
-    }
-
-    // Función para capturar una foto
-    function capturePhoto() {
-        if (!cameraStream) return;
-
-        const canvas = document.createElement('canvas');
-        canvas.width = cameraPreview.videoWidth;
-        canvas.height = cameraPreview.videoHeight;
-        const ctx = canvas.getContext('2d');
-        ctx.drawImage(cameraPreview, 0, 0, canvas.width, canvas.height);
-
-        const imageData = canvas.toDataURL('image/jpeg');
-        imagePreview.src = imageData;
-
-        canvas.toBlob(function(blob) {
-            currentFile = new File([blob], 'camera_photo.jpg', { type: 'image/jpeg' });
-
-            const date = new Date();
-            const formattedDate = `${date.getDate()}-${date.getMonth() + 1}-${date.getFullYear()}`;
-            documentName.value = `Foto_${formattedDate}`;
-
-            previewContainer.style.display = 'block';
-        }, 'image/jpeg');
-
-        closeCamera();
-    }
-
-    // Función para guardar un documento en IndexedDB
-    function saveDocument() {
-        if (!currentFile) {
-            showNotification('No hay ningún archivo seleccionado', true);
-            return;
-        }
-
-        const name = documentName.value.trim() || `Documento_${new Date().toLocaleDateString()}`;
-        loader.style.display = 'flex';
-
-        const reader = new FileReader();
-        reader.onload = function(e) {
-            const fileData = e.target.result;
-
-            const docId = 'doc_' + Date.now();
-            const doc = {
-                id: docId,
-                name: name,
-                type: currentFile.type,
-                size: currentFile.size,
-                date: new Date().toISOString(),
-                data: fileData
+            request.onerror = function(event) {
+                console.error('Error al obtener documento:', event.target.error);
+                loader.style.display = 'none';
+                showNotification('Error al descargar', true);
             };
+        }
+
+        // Función para eliminar un documento
+        function deleteDocument(docId) {
+            if (!confirm('¿Estás seguro de que deseas eliminar este documento?')) {
+                return;
+            }
+
+            loader.style.display = 'flex';
 
             const transaction = db.transaction([STORE_NAME], 'readwrite');
             const objectStore = transaction.objectStore(STORE_NAME);
-            const request = objectStore.add(doc);
+            const request = objectStore.delete(docId);
 
             request.onsuccess = function() {
-                console.log('Documento guardado en IndexedDB:', docId);
-                
-                // Recargar la lista
+                console.log('Documento eliminado:', docId);
                 loadDocumentsList().then(() => {
                     displayDocuments();
-                    
-                    // Resetear interfaz
-                    previewContainer.style.display = 'none';
-                    imagePreview.src = '';
-                    documentName.value = '';
-                    currentFile = null;
-                    fileInput.value = '';
-                    
-                    showNotification('Documento guardado correctamente');
+                    showNotification('Documento eliminado correctamente');
                 });
             };
 
             request.onerror = function(event) {
-                console.error('Error al guardar documento:', event.target.error);
-                showNotification('Error al guardar: ' + event.target.error.message, true);
-                
-                if (event.target.error.name === 'QuotaExceededError') {
-                    showNotification('Almacenamiento lleno. Elimina documentos antes de guardar.', true);
-                }
+                console.error('Error al eliminar documento:', event.target.error);
+                showNotification('Error al eliminar: ' + event.target.error.message, true);
             };
 
             loader.style.display = 'none';
-        };
-
-        reader.onerror = function() {
-            console.error('Error al leer el archivo');
-            loader.style.display = 'none';
-            showNotification('Error al leer el archivo', true);
-        };
-
-        reader.readAsDataURL(currentFile);
-    }
-
-    // Función para mostrar los documentos en la interfaz
-    function displayDocuments() {
-        documentsContainer.innerHTML = '';
-
-        if (documentsList.length === 0) {
-            documentsContainer.innerHTML = `
-                <div class="empty-state">
-                    <h3>No hay documentos</h3>
-                    <p>Sube una imagen o archivo PDF para empezar.</p>
-                </div>
-            `;
-            return;
         }
 
-        documentsList.sort((a, b) => new Date(b.date) - new Date(a.date));
+        // Función para formatear el tamaño de archivo
+        function formatFileSize(bytes) {
+            if (bytes === 0) return '0 B';
 
-        documentsList.forEach(function(doc) {
-            const docItem = document.createElement('div');
-            docItem.className = 'document-item';
+            const k = 1024;
+            const sizes = ['B', 'KB', 'MB', 'GB'];
+            const i = Math.floor(Math.log(bytes) / Math.log(k));
 
-            const date = new Date(doc.date);
-            const formattedDate = `${date.getDate()}-${date.getMonth() + 1}-${date.getFullYear()}`;
-            const formattedSize = formatFileSize(doc.size);
-
-            docItem.innerHTML = `
-                <div class="document-title">${doc.name}</div>
-                <div class="document-meta">
-                    Fecha: ${formattedDate} | Tamaño: ${formattedSize}
-                </div>
-                <div class="document-actions">
-                    <button onclick="viewDocument('${doc.id}')">Ver</button>
-                    <button class="success" onclick="downloadDocument('${doc.id}')">Descargar</button>
-                    <button class="danger" onclick="deleteDocument('${doc.id}')">Eliminar</button>
-                </div>
-            `;
-
-            documentsContainer.appendChild(docItem);
-        });
-    }
-
-    // Función para ver un documento
-    function viewDocument(docId) {
-        loader.style.display = 'flex';
-
-        const transaction = db.transaction([STORE_NAME], 'readonly');
-        const objectStore = transaction.objectStore(STORE_NAME);
-        const request = objectStore.get(docId);
-
-        request.onsuccess = function(event) {
-            const doc = event.target.result;
-            if (!doc) {
-                throw new Error('Documento no encontrado');
-            }
-
-            pdfFrame.src = doc.data;
-            pdfViewer.style.display = 'block';
-            loader.style.display = 'none';
-        };
-
-        request.onerror = function(event) {
-            console.error('Error al obtener documento:', event.target.error);
-            loader.style.display = 'none';
-            showNotification('Error al cargar documento', true);
-        };
-    }
-
-    // Función para descargar un documento
-    function downloadDocument(docId) {
-        loader.style.display = 'flex';
-
-        const transaction = db.transaction([STORE_NAME], 'readonly');
-        const objectStore = transaction.objectStore(STORE_NAME);
-        const request = objectStore.get(docId);
-
-        request.onsuccess = function(event) {
-            const doc = event.target.result;
-            if (!doc) {
-                throw new Error('Documento no encontrado');
-            }
-
-            const extension = doc.type === 'application/pdf' ? '.pdf' : 
-                            doc.type === 'image/png' ? '.png' : '.jpg';
-
-            const a = document.createElement('a');
-            a.href = doc.data;
-            a.download = doc.name + extension;
-            document.body.appendChild(a);
-            a.click();
-            document.body.removeChild(a);
-
-            loader.style.display = 'none';
-        };
-
-        request.onerror = function(event) {
-            console.error('Error al obtener documento:', event.target.error);
-            loader.style.display = 'none';
-            showNotification('Error al descargar', true);
-        };
-    }
-
-    // Función para eliminar un documento
-    function deleteDocument(docId) {
-        if (!confirm('¿Estás seguro de que deseas eliminar este documento?')) {
-            return;
+            return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
         }
 
-        loader.style.display = 'flex';
-
-        const transaction = db.transaction([STORE_NAME], 'readwrite');
-        const objectStore = transaction.objectStore(STORE_NAME);
-        const request = objectStore.delete(docId);
-
-        request.onsuccess = function() {
-            console.log('Documento eliminado:', docId);
-            loadDocumentsList().then(() => {
-                displayDocuments();
-                showNotification('Documento eliminado correctamente');
-            });
-        };
-
-        request.onerror = function(event) {
-            console.error('Error al eliminar documento:', event.target.error);
-            showNotification('Error al eliminar: ' + event.target.error.message, true);
-        };
-
-        loader.style.display = 'none';
-    }
-
-    // Función para formatear el tamaño de archivo
-    function formatFileSize(bytes) {
-        if (bytes === 0) return '0 B';
-
-        const k = 1024;
-        const sizes = ['B', 'KB', 'MB', 'GB'];
-        const i = Math.floor(Math.log(bytes) / Math.log(k));
-
-        return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
-    }
-
-    // Hacer accesibles las funciones desde el HTML
-    window.viewDocument = viewDocument;
-    window.downloadDocument = downloadDocument;
-    window.deleteDocument = deleteDocument;
-</script>
+        // Hacer accesibles las funciones desde el HTML
+        window.viewDocument = viewDocument;
+        window.downloadDocument = downloadDocument;
+        window.deleteDocument = deleteDocument;
+    </script>
 </body>
 </html>
