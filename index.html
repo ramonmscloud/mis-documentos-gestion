@@ -5,109 +5,319 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Gestor de Documentos PDF</title>
     <style>
+        :root {
+            --primary-color: #2c3e50;
+            --secondary-color: #3498db;
+            --success-color: #27ae60;
+            --danger-color: #e74c3c;
+            --warning-color: #f39c12;
+            --light-gray: #f8f9fa;
+            --medium-gray: #6c757d;
+            --dark-gray: #343a40;
+            --border-radius: 8px;
+            --box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            --transition: all 0.3s ease;
+        }
+
+        * {
+            box-sizing: border-box;
+        }
+
         body {
-            font-family: Arial, sans-serif;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
             margin: 0;
             padding: 0;
-            background-color: #f5f5f5;
+            background-color: var(--light-gray);
+            line-height: 1.6;
+            color: var(--dark-gray);
         }
         
         header {
-            background-color: #2c3e50;
+            background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
             color: white;
-            padding: 15px;
+            padding: 20px;
             text-align: center;
+            box-shadow: var(--box-shadow);
+        }
+
+        header h1 {
+            margin: 0;
+            font-size: 2rem;
+            font-weight: 300;
         }
         
         .container {
-            max-width: 800px;
+            max-width: 1000px;
             margin: 20px auto;
             padding: 20px;
         }
+
+        .search-container {
+            background: white;
+            padding: 20px;
+            border-radius: var(--border-radius);
+            margin-bottom: 20px;
+            box-shadow: var(--box-shadow);
+        }
+
+        .search-box {
+            position: relative;
+            margin-bottom: 15px;
+        }
+
+        .search-input {
+            width: 100%;
+            padding: 12px 45px 12px 15px;
+            border: 2px solid #e9ecef;
+            border-radius: var(--border-radius);
+            font-size: 16px;
+            transition: var(--transition);
+        }
+
+        .search-input:focus {
+            outline: none;
+            border-color: var(--secondary-color);
+        }
+
+        .search-icon {
+            position: absolute;
+            right: 15px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: var(--medium-gray);
+        }
+
+        .filters {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+
+        .filter-btn {
+            padding: 8px 16px;
+            border: 2px solid #dee2e6;
+            background: white;
+            border-radius: 20px;
+            cursor: pointer;
+            transition: var(--transition);
+            font-size: 14px;
+        }
+
+        .filter-btn:hover,
+        .filter-btn.active {
+            background: var(--secondary-color);
+            color: white;
+            border-color: var(--secondary-color);
+        }
         
         .upload-area {
-            border: 2px dashed #ccc;
-            border-radius: 5px;
-            padding: 30px;
+            border: 3px dashed #dee2e6;
+            border-radius: var(--border-radius);
+            padding: 40px;
             text-align: center;
             margin-bottom: 30px;
-            background-color: white;
+            background: white;
+            transition: var(--transition);
+            cursor: pointer;
+        }
+
+        .upload-area:hover,
+        .upload-area.dragover {
+            border-color: var(--secondary-color);
+            background-color: #f8f9ff;
+        }
+
+        .upload-area h2 {
+            margin-top: 0;
+            color: var(--primary-color);
+        }
+
+        .upload-area p {
+            color: var(--medium-gray);
+            margin-bottom: 20px;
         }
         
         button {
-            background-color: #3498db;
+            background-color: var(--secondary-color);
             color: white;
             border: none;
-            padding: 10px 15px;
+            padding: 12px 20px;
             margin: 5px;
-            border-radius: 5px;
+            border-radius: var(--border-radius);
             cursor: pointer;
+            font-size: 14px;
+            font-weight: 500;
+            transition: var(--transition);
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
         }
         
         button:hover {
-            background-color: #2980b9;
+            transform: translateY(-1px);
+            box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+        }
+
+        button:active {
+            transform: translateY(0);
         }
         
         button.success {
-            background-color: #2ecc71;
+            background-color: var(--success-color);
         }
         
         button.danger {
-            background-color: #e74c3c;
+            background-color: var(--danger-color);
+        }
+
+        button.warning {
+            background-color: var(--warning-color);
+        }
+
+        button:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
         }
         
         .preview-container {
             display: none;
-            padding: 20px;
-            background-color: white;
-            border-radius: 5px;
+            padding: 30px;
+            background: white;
+            border-radius: var(--border-radius);
             margin-bottom: 30px;
-            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+            box-shadow: var(--box-shadow);
         }
         
         .preview-image {
             max-width: 100%;
-            max-height: 300px;
+            max-height: 400px;
             display: block;
             margin: 0 auto 20px;
-            border-radius: 5px;
+            border-radius: var(--border-radius);
+            box-shadow: var(--box-shadow);
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: 600;
+            color: var(--primary-color);
         }
         
-        input[type="text"] {
+        input[type="text"],
+        select,
+        textarea {
             width: 100%;
-            padding: 10px;
-            margin: 10px 0;
-            border: 1px solid #ddd;
-            border-radius: 5px;
-            box-sizing: border-box;
+            padding: 12px;
+            border: 2px solid #e9ecef;
+            border-radius: var(--border-radius);
+            font-size: 16px;
+            transition: var(--transition);
+        }
+
+        input[type="text"]:focus,
+        select:focus,
+        textarea:focus {
+            outline: none;
+            border-color: var(--secondary-color);
+        }
+
+        textarea {
+            resize: vertical;
+            min-height: 80px;
+        }
+
+        .file-info {
+            background: var(--light-gray);
+            padding: 15px;
+            border-radius: var(--border-radius);
+            margin-bottom: 20px;
+            font-size: 14px;
+            color: var(--medium-gray);
         }
         
-        .documents-list {
-            background-color: white;
-            border-radius: 5px;
-            padding: 20px;
-            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        .documents-section {
+            background: white;
+            border-radius: var(--border-radius);
+            padding: 30px;
+            box-shadow: var(--box-shadow);
+        }
+
+        .documents-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+            gap: 15px;
+        }
+
+        .documents-stats {
+            font-size: 14px;
+            color: var(--medium-gray);
         }
         
         .document-item {
-            padding: 15px;
-            border-bottom: 1px solid #eee;
+            padding: 20px;
+            border: 1px solid #e9ecef;
+            border-radius: var(--border-radius);
+            margin-bottom: 15px;
+            transition: var(--transition);
+            background: white;
+        }
+
+        .document-item:hover {
+            box-shadow: var(--box-shadow);
+            transform: translateY(-2px);
         }
         
         .document-title {
-            font-weight: bold;
-            margin-bottom: 5px;
+            font-weight: 600;
+            margin-bottom: 8px;
+            font-size: 18px;
+            color: var(--primary-color);
         }
         
         .document-meta {
-            font-size: 0.8em;
-            color: #777;
+            font-size: 14px;
+            color: var(--medium-gray);
             margin-bottom: 10px;
+            display: flex;
+            gap: 15px;
+            flex-wrap: wrap;
+        }
+
+        .document-description {
+            color: var(--dark-gray);
+            margin-bottom: 15px;
+            font-size: 14px;
+            line-height: 1.5;
+        }
+
+        .document-tags {
+            margin-bottom: 15px;
+        }
+
+        .tag {
+            display: inline-block;
+            background: var(--light-gray);
+            color: var(--primary-color);
+            padding: 4px 8px;
+            border-radius: 12px;
+            font-size: 12px;
+            margin-right: 5px;
+            margin-bottom: 5px;
         }
         
         .document-actions {
             display: flex;
-            gap: 5px;
+            gap: 8px;
+            flex-wrap: wrap;
         }
         
         .modal {
@@ -119,6 +329,7 @@
             height: 100%;
             background-color: rgba(0,0,0,0.8);
             z-index: 1000;
+            backdrop-filter: blur(4px);
         }
         
         .modal-content {
@@ -127,16 +338,30 @@
             margin: 5% auto;
             background-color: white;
             position: relative;
+            border-radius: var(--border-radius);
+            overflow: hidden;
         }
         
         .close-button {
             position: absolute;
-            top: 10px;
-            right: 10px;
+            top: 15px;
+            right: 20px;
             font-size: 30px;
             color: white;
             cursor: pointer;
             z-index: 1001;
+            background: rgba(0,0,0,0.5);
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: var(--transition);
+        }
+
+        .close-button:hover {
+            background: rgba(0,0,0,0.7);
         }
         
         iframe {
@@ -147,8 +372,14 @@
         
         .empty-state {
             text-align: center;
-            padding: 30px;
-            color: #777;
+            padding: 60px 20px;
+            color: var(--medium-gray);
+        }
+
+        .empty-state-icon {
+            font-size: 4rem;
+            margin-bottom: 20px;
+            opacity: 0.5;
         }
         
         .loader {
@@ -158,20 +389,19 @@
             left: 0;
             width: 100%;
             height: 100%;
-            background-color: rgba(0,0,0,0.5);
+            background-color: rgba(0,0,0,0.7);
             z-index: 2000;
-            display: flex;
             justify-content: center;
             align-items: center;
+            backdrop-filter: blur(2px);
         }
         
-        .loader:after {
-            content: "";
-            width: 40px;
-            height: 40px;
+        .spinner {
+            width: 50px;
+            height: 50px;
+            border: 4px solid rgba(255,255,255,0.3);
+            border-top: 4px solid white;
             border-radius: 50%;
-            border: 5px solid #f3f3f3;
-            border-top: 5px solid #3498db;
             animation: spin 1s linear infinite;
         }
         
@@ -184,529 +414,516 @@
             position: fixed;
             bottom: 20px;
             right: 20px;
-            padding: 15px 20px;
-            background-color: #2ecc71;
+            padding: 16px 24px;
+            background-color: var(--success-color);
             color: white;
-            border-radius: 5px;
-            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+            border-radius: var(--border-radius);
+            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2);
             display: none;
             z-index: 1100;
+            max-width: 400px;
+            animation: slideIn 0.3s ease-out;
         }
         
         .notification.error {
-            background-color: #e74c3c;
+            background-color: var(--danger-color);
+        }
+
+        .notification.warning {
+            background-color: var(--warning-color);
+        }
+
+        @keyframes slideIn {
+            from {
+                transform: translateX(100%);
+                opacity: 0;
+            }
+            to {
+                transform: translateX(0);
+                opacity: 1;
+            }
+        }
+
+        .progress-bar {
+            width: 100%;
+            height: 4px;
+            background: #e9ecef;
+            border-radius: 2px;
+            overflow: hidden;
+            margin-top: 10px;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: var(--secondary-color);
+            border-radius: 2px;
+            transition: width 0.3s ease;
+            width: 0%;
+        }
+
+        /* Responsive Design */
+        @media (max-width: 768px) {
+            .container {
+                margin: 10px;
+                padding: 10px;
+            }
+
+            .upload-area {
+                padding: 20px;
+            }
+
+            .document-actions {
+                justify-content: center;
+            }
+
+            .documents-header {
+                flex-direction: column;
+                align-items: flex-start;
+            }
+
+            button {
+                width: 100%;
+                justify-content: center;
+                margin: 5px 0;
+            }
+
+            .modal-content {
+                width: 95%;
+                height: 95%;
+                margin: 2.5% auto;
+            }
+        }
+
+        /* Dark mode support */
+        @media (prefers-color-scheme: dark) {
+            :root {
+                --light-gray: #1a1a1a;
+                --dark-gray: #e9ecef;
+                --medium-gray: #adb5bd;
+            }
+
+            body {
+                background-color: var(--light-gray);
+                color: var(--dark-gray);
+            }
+
+            .upload-area,
+            .preview-container,
+            .documents-section,
+            .search-container,
+            .document-item {
+                background: #2d2d2d;
+                border-color: #444;
+            }
+
+            input[type="text"],
+            select,
+            textarea {
+                background: #333;
+                color: var(--dark-gray);
+                border-color: #555;
+            }
+        }
+
+        /* Accessibility */
+        .sr-only {
+            position: absolute;
+            width: 1px;
+            height: 1px;
+            padding: 0;
+            margin: -1px;
+            overflow: hidden;
+            clip: rect(0, 0, 0, 0);
+            white-space: nowrap;
+            border: 0;
+        }
+
+        /* Focus styles for keyboard navigation */
+        button:focus,
+        input:focus,
+        select:focus,
+        textarea:focus {
+            outline: 2px solid var(--secondary-color);
+            outline-offset: 2px;
         }
     </style>
 </head>
 <body>
     <header>
         <h1>Gestor de Documentos PDF</h1>
+        <p>Organiza, almacena y gestiona tus documentos de forma eficiente</p>
     </header>
     
     <div class="container">
-        <div class="upload-area" id="uploadArea">
+        <!-- Buscador y filtros -->
+        <div class="search-container">
+            <div class="search-box">
+                <input 
+                    type="text" 
+                    id="searchInput" 
+                    class="search-input" 
+                    placeholder="Buscar documentos por nombre..."
+                    aria-label="Buscar documentos"
+                >
+                <span class="search-icon">🔍</span>
+            </div>
+            <div class="filters">
+                <button class="filter-btn active" data-filter="all">Todos</button>
+                <button class="filter-btn" data-filter="pdf">PDFs</button>
+                <button class="filter-btn" data-filter="image">Imágenes</button>
+                <button class="filter-btn" data-filter="recent">Recientes</button>
+            </div>
+        </div>
+
+        <!-- Área de subida -->
+        <div class="upload-area" id="uploadArea" tabindex="0" role="button" aria-label="Área de subida de archivos">
             <h2>Enlazar imagen o archivo PDF</h2>
             <p>Arrastra y suelta archivos aquí o utiliza los botones a continuación</p>
             <div>
-                <button id="selectFileBtn">Seleccionar archivo</button>
-                <button id="takePhotoBtn" class="success">Tomar foto</button>
+                <button id="selectFileBtn">
+                    📁 Seleccionar archivo
+                </button>
+                <button id="takePhotoBtn" class="success">
+                    📷 Tomar foto
+                </button>
             </div>
-            <input type="file" id="fileInput" accept=".jpg,.jpeg,.png,.pdf" style="display:none">
+            <input type="file" id="fileInput" accept=".jpg,.jpeg,.png,.pdf" style="display:none" aria-label="Selector de archivos">
         </div>
         
+        <!-- Vista previa -->
         <div class="preview-container" id="previewContainer">
             <h2 style="text-align:center">Vista previa</h2>
-            <img id="imagePreview" class="preview-image" alt="Vista previa">
+            <img id="imagePreview" class="preview-image" alt="Vista previa del documento">
             
-            <div>
-                <label for="documentName"><strong>Nombre del documento:</strong></label>
-                <input type="text" id="documentName" placeholder="Nombre del documento">
+            <div class="file-info" id="fileInfo"></div>
+            
+            <div class="form-group">
+                <label for="documentName">Nombre del documento *</label>
+                <input type="text" id="documentName" placeholder="Ingrese el nombre del documento" required>
+            </div>
+
+            <div class="form-group">
+                <label for="documentCategory">Categoría</label>
+                <select id="documentCategory">
+                    <option value="general">General</option>
+                    <option value="personal">Personal</option>
+                    <option value="trabajo">Trabajo</option>
+                    <option value="legal">Legal</option>
+                    <option value="medico">Médico</option>
+                    <option value="financiero">Financiero</option>
+                    <option value="educativo">Educativo</option>
+                </select>
+            </div>
+
+            <div class="form-group">
+                <label for="documentDescription">Descripción (opcional)</label>
+                <textarea id="documentDescription" placeholder="Breve descripción del documento"></textarea>
+            </div>
+
+            <div class="form-group">
+                <label for="documentTags">Etiquetas (separadas por comas)</label>
+                <input type="text" id="documentTags" placeholder="ejemplo: importante, 2024, contrato">
             </div>
             
             <div style="text-align:center; margin-top:20px">
-                <button id="createPdfBtn">Guardar documento</button>
+                <button id="createPdfBtn">
+                    💾 Guardar documento
+                </button>
+                <button id="cancelBtn" class="danger">
+                    ❌ Cancelar
+                </button>
+            </div>
+
+            <div class="progress-bar" id="progressBar" style="display: none;">
+                <div class="progress-fill" id="progressFill"></div>
             </div>
         </div>
         
+        <!-- Lista de documentos -->
         <div class="documents-section">
-            <h2>Mis documentos</h2>
+            <div class="documents-header">
+                <div>
+                    <h2>Mis documentos</h2>
+                    <div class="documents-stats" id="documentsStats">0 documentos</div>
+                </div>
+                <div>
+                    <button id="exportAllBtn" class="warning">
+                        📤 Exportar todos
+                    </button>
+                    <button id="clearAllBtn" class="danger">
+                        🗑️ Limpiar todo
+                    </button>
+                </div>
+            </div>
+            
             <div id="loadingDocuments" class="empty-state" style="display: none;">
-                <div style="margin-bottom: 15px; font-size: 24px;">⏳</div>
+                <div class="empty-state-icon">⏳</div>
                 <h3>Cargando tus documentos...</h3>
                 <p>Por favor espera.</p>
             </div>
-            <div id="documentsContainer" class="documents-list">
+            
+            <div id="documentsContainer">
                 <!-- Contenido generado dinámicamente -->
             </div>
         </div>
     </div>
     
-    <div class="modal" id="pdfViewer">
-        <span class="close-button" id="closePdfViewer">&times;</span>
+    <!-- Modal para visualizar PDFs -->
+    <div class="modal" id="pdfViewer" role="dialog" aria-labelledby="pdfViewerTitle" aria-hidden="true">
+        <span class="close-button" id="closePdfViewer" aria-label="Cerrar visor">&times;</span>
         <div class="modal-content">
-            <iframe id="pdfFrame"></iframe>
+            <iframe id="pdfFrame" title="Visor de documento"></iframe>
         </div>
     </div>
     
-    <div class="modal" id="cameraContainer">
-        <span class="close-button" id="closeCameraBtn">&times;</span>
+    <!-- Modal para la cámara -->
+    <div class="modal" id="cameraContainer" role="dialog" aria-labelledby="cameraTitle" aria-hidden="true">
+        <span class="close-button" id="closeCameraBtn" aria-label="Cerrar cámara">&times;</span>
         <div class="modal-content" style="background-color: black;">
             <video id="cameraPreview" style="width: 100%; height: 100%; object-fit: contain;" autoplay playsinline webkit-playsinline></video>
             <div style="position: absolute; bottom: 20px; left: 0; width: 100%; text-align: center;">
-                <button id="capturePhotoBtn" class="success">Capturar foto</button>
+                <button id="capturePhotoBtn" class="success">
+                    📸 Capturar foto
+                </button>
+                <button id="switchCameraBtn">
+                    🔄 Cambiar cámara
+                </button>
             </div>
         </div>
     </div>
     
-    <div class="loader" id="loader"></div>
+    <!-- Loader -->
+    <div class="loader" id="loader" role="status" aria-label="Cargando">
+        <div class="spinner"></div>
+    </div>
     
-    <div class="notification" id="notification"></div>
+    <!-- Notificaciones -->
+    <div class="notification" id="notification" role="alert"></div>
     
     <script>
-        // Elementos del DOM
-        const uploadArea = document.getElementById('uploadArea');
-        const fileInput = document.getElementById('fileInput');
-        const selectFileBtn = document.getElementById('selectFileBtn');
-        const takePhotoBtn = document.getElementById('takePhotoBtn');
-        const previewContainer = document.getElementById('previewContainer');
-        const imagePreview = document.getElementById('imagePreview');
-        const documentName = document.getElementById('documentName');
-        const createPdfBtn = document.getElementById('createPdfBtn');
-        const documentsContainer = document.getElementById('documentsContainer');
-        const pdfViewer = document.getElementById('pdfViewer');
-        const pdfFrame = document.getElementById('pdfFrame');
-        const closePdfViewer = document.getElementById('closePdfViewer');
-        const cameraContainer = document.getElementById('cameraContainer');
-        const cameraPreview = document.getElementById('cameraPreview');
-        const capturePhotoBtn = document.getElementById('capturePhotoBtn');
-        const closeCameraBtn = document.getElementById('closeCameraBtn');
-        const loader = document.getElementById('loader');
-        const notification = document.getElementById('notification');
+        // Configuración y constantes
+        const CONFIG = {
+            maxFileSize: 15 * 1024 * 1024, // 15MB
+            maxImageSize: 10 * 1024 * 1024, // 10MB para imágenes
+            maxPdfSize: 15 * 1024 * 1024, // 15MB para PDFs
+            imageCompressionQuality: 0.8,
+            maxImageWidth: 1920,
+            maxImageHeight: 1080,
+            allowedImageTypes: ['image/jpeg', 'image/jpg', 'image/png'],
+            allowedPdfTypes: ['application/pdf'],
+            dbName: 'PDFManagerDB',
+            dbVersion: 2,
+            storeName: 'documents'
+        };
 
         // Variables globales
         let currentFile = null;
         let cameraStream = null;
-        let documentsList = []; // Lista de documentos
-
-        // Nombre de la base de datos IndexedDB
-        const DB_NAME = 'PDFManagerDB';
-        const DB_VERSION = 1;
-        const STORE_NAME = 'documents';
-
+        let currentCamera = 'environment';
+        let documentsList = [];
+        let filteredDocuments = [];
         let db = null;
 
-        // Inicializar IndexedDB al cargar la página
-        window.onload = function() {
-            console.log("Página cargada");
-
-            // Abrir/crear la base de datos
-            const request = indexedDB.open(DB_NAME, DB_VERSION);
-
-            request.onerror = function(event) {
-                console.error('Error al abrir IndexedDB:', event.target.errorCode);
-                showNotification('Error al inicializar la base de datos', true);
-            };
-
-            request.onsuccess = function(event) {
-                db = event.target.result;
-                console.log('IndexedDB abierto correctamente');
-
-                // Mostrar indicador de carga
-                const loadingIndicator = document.getElementById('loadingDocuments');
-                loadingIndicator.style.display = 'block';
-                documentsContainer.style.display = 'none';
-
-                loadDocumentsList()
-                    .then(() => {
-                        displayDocuments();
-                    })
-                    .catch(error => {
-                        console.error('Error al cargar documentos:', error);
-                        showNotification('Error al cargar documentos guardados', true);
-                    })
-                    .finally(() => {
-                        loadingIndicator.style.display = 'none';
-                        documentsContainer.style.display = 'block';
-                    });
-            };
-
-            request.onupgradeneeded = function(event) {
-                db = event.target.result;
-                if (!db.objectStoreNames.contains(STORE_NAME)) {
-                    const objectStore = db.createObjectStore(STORE_NAME, { keyPath: 'id' });
-                    objectStore.createIndex('date', 'date', { unique: false });
-                    console.log('ObjectStore creado');
-                }
-            };
-
-            // Event Listeners
-            selectFileBtn.onclick = function() {
-                fileInput.click();
-            };
-
-            fileInput.onchange = function() {
-                handleFileSelection();
-            };
-
-            uploadArea.ondragover = function(e) {
-                e.preventDefault();
-                uploadArea.style.borderColor = '#3498db';
-            };
-
-            uploadArea.ondragleave = function() {
-                uploadArea.style.borderColor = '#ccc';
-            };
-
-            uploadArea.ondrop = function(e) {
-                e.preventDefault();
-                uploadArea.style.borderColor = '#ccc';
-                if (e.dataTransfer.files.length) {
-                    fileInput.files = e.dataTransfer.files;
-                    handleFileSelection();
-                }
-            };
-
-            takePhotoBtn.onclick = openCamera;
-            capturePhotoBtn.onclick = capturePhoto;
-            closeCameraBtn.onclick = closeCamera;
-            createPdfBtn.onclick = saveDocument;
-            closePdfViewer.onclick = function() {
-                pdfViewer.style.display = 'none';
-                pdfFrame.src = '';
-            };
+        // Elementos del DOM
+        const elements = {
+            uploadArea: document.getElementById('uploadArea'),
+            fileInput: document.getElementById('fileInput'),
+            selectFileBtn: document.getElementById('selectFileBtn'),
+            takePhotoBtn: document.getElementById('takePhotoBtn'),
+            previewContainer: document.getElementById('previewContainer'),
+            imagePreview: document.getElementById('imagePreview'),
+            fileInfo: document.getElementById('fileInfo'),
+            documentName: document.getElementById('documentName'),
+            documentCategory: document.getElementById('documentCategory'),
+            documentDescription: document.getElementById('documentDescription'),
+            documentTags: document.getElementById('documentTags'),
+            createPdfBtn: document.getElementById('createPdfBtn'),
+            cancelBtn: document.getElementById('cancelBtn'),
+            progressBar: document.getElementById('progressBar'),
+            progressFill: document.getElementById('progressFill'),
+            searchInput: document.getElementById('searchInput'),
+            filterBtns: document.querySelectorAll('.filter-btn'),
+            documentsContainer: document.getElementById('documentsContainer'),
+            documentsStats: document.getElementById('documentsStats'),
+            exportAllBtn: document.getElementById('exportAllBtn'),
+            clearAllBtn: document.getElementById('clearAllBtn'),
+            loadingDocuments: document.getElementById('loadingDocuments'),
+            pdfViewer: document.getElementById('pdfViewer'),
+            pdfFrame: document.getElementById('pdfFrame'),
+            closePdfViewer: document.getElementById('closePdfViewer'),
+            cameraContainer: document.getElementById('cameraContainer'),
+            cameraPreview: document.getElementById('cameraPreview'),
+            capturePhotoBtn: document.getElementById('capturePhotoBtn'),
+            switchCameraBtn: document.getElementById('switchCameraBtn'),
+            closeCameraBtn: document.getElementById('closeCameraBtn'),
+            loader: document.getElementById('loader'),
+            notification: document.getElementById('notification')
         };
 
-        // Función para cargar la lista de documentos desde IndexedDB
-        function loadDocumentsList() {
+        // Inicialización
+        window.addEventListener('load', initializeApp);
+        window.addEventListener('beforeunload', cleanup);
+
+        async function initializeApp() {
+            try {
+                console.log('Inicializando aplicación...');
+                await initializeDatabase();
+                setupEventListeners();
+                await loadDocuments();
+                updateDocumentsStats();
+                showNotification('Aplicación inicializada correctamente');
+            } catch (error) {
+                logError('App initialization', error);
+            }
+        }
+
+        // Base de datos IndexedDB
+        function initializeDatabase() {
             return new Promise((resolve, reject) => {
-                const transaction = db.transaction([STORE_NAME], 'readonly');
-                const objectStore = transaction.objectStore(STORE_NAME);
-                const request = objectStore.getAll();
+                const request = indexedDB.open(CONFIG.dbName, CONFIG.dbVersion);
 
-                request.onsuccess = function(event) {
-                    documentsList = event.target.result.map(doc => ({
-                        id: doc.id,
-                        name: doc.name,
-                        type: doc.type,
-                        size: doc.size,
-                        date: doc.date
-                    }));
-                    console.log(`Cargados ${documentsList.length} documentos desde IndexedDB`);
-                    resolve(documentsList);
+                request.onerror = () => {
+                    reject(new Error('Error al abrir IndexedDB'));
                 };
 
-                request.onerror = function(event) {
-                    console.error('Error al cargar documentos:', event.target.error);
-                    reject(event.target.error);
-                };
-            });
-        }
-
-        // Función para mostrar notificaciones
-        function showNotification(message, isError = false) {
-            notification.textContent = message;
-            notification.className = isError ? 'notification error' : 'notification';
-            notification.style.display = 'block';
-
-            setTimeout(function() {
-                notification.style.display = 'none';
-            }, 3000);
-        }
-
-        // Función para manejar la selección de archivos
-        function handleFileSelection() {
-            const file = fileInput.files[0];
-            if (!file) return;
-
-            currentFile = file;
-
-            if (file.type === 'application/pdf') {
-                imagePreview.src = 'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAzODQgNTEyIj48cGF0aCBmaWxsPSIjZTc0YzNjIiBkPSJNMCAwaDM4NHY1MTJIMHoiLz48dGV4dCB4PSI1MCUiIHk9IjUwJSIgZG9taW5hbnQtYmFzZWxpbmU9Im1pZGRsZSIgdGV4dC1hbmNob3I9Im1pZGRsZSIgZm9udC1zaXplPSI4MCIgZmlsbD0id2hpdGUiPlBERjwvdGV4dD48L3N2Zz4=';
-            } else if (file.type.startsWith('image/')) {
-                const reader = new FileReader();
-                reader.onload = function(e) {
-                    imagePreview.src = e.target.result;
-                };
-                reader.readAsDataURL(file);
-            } else {
-                showNotification('Formato de archivo no admitido', true);
-                return;
-            }
-
-            const fileName = file.name.split('.')[0] || 'Documento';
-            const date = new Date();
-            const formattedDate = `${date.getDate()}-${date.getMonth() + 1}-${date.getFullYear()}`;
-            documentName.value = `${fileName}_${formattedDate}`;
-
-            previewContainer.style.display = 'block';
-        }
-
-        // Función para abrir la cámara
-        function openCamera() {
-            if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-                showNotification('Tu navegador no soporta el acceso a la cámara', true);
-                return;
-            }
-
-            navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } })
-                .then(function(stream) {
-                    cameraStream = stream;
-                    cameraPreview.srcObject = stream;
-                    cameraContainer.style.display = 'block';
-                })
-                .catch(function(error) {
-                    console.error('Error al acceder a la cámara:', error);
-                    showNotification('No se pudo acceder a la cámara', true);
-                });
-        }
-
-        // Función para cerrar la cámara
-        function closeCamera() {
-            if (cameraStream) {
-                cameraStream.getTracks().forEach(function(track) {
-                    track.stop();
-                });
-                cameraStream = null;
-            }
-            cameraContainer.style.display = 'none';
-        }
-
-        // Función para capturar una foto
-        function capturePhoto() {
-            if (!cameraStream) return;
-
-            const canvas = document.createElement('canvas');
-            canvas.width = cameraPreview.videoWidth;
-            canvas.height = cameraPreview.videoHeight;
-            const ctx = canvas.getContext('2d');
-            ctx.drawImage(cameraPreview, 0, 0, canvas.width, canvas.height);
-
-            const imageData = canvas.toDataURL('image/jpeg');
-            imagePreview.src = imageData;
-
-            canvas.toBlob(function(blob) {
-                currentFile = new File([blob], 'camera_photo.jpg', { type: 'image/jpeg' });
-
-                const date = new Date();
-                const formattedDate = `${date.getDate()}-${date.getMonth() + 1}-${date.getFullYear()}`;
-                documentName.value = `Foto_${formattedDate}`;
-
-                previewContainer.style.display = 'block';
-            }, 'image/jpeg');
-
-            closeCamera();
-        }
-
-        // Función para guardar un documento en IndexedDB
-        function saveDocument() {
-            if (!currentFile) {
-                showNotification('No hay ningún archivo seleccionado', true);
-                return;
-            }
-
-            const name = documentName.value.trim() || `Documento_${new Date().toLocaleDateString()}`;
-            loader.style.display = 'flex';
-
-            const reader = new FileReader();
-            reader.onload = function(e) {
-                const fileData = e.target.result;
-
-                const docId = 'doc_' + Date.now();
-                const doc = {
-                    id: docId,
-                    name: name,
-                    type: currentFile.type,
-                    size: currentFile.size,
-                    date: new Date().toISOString(),
-                    data: fileData
+                request.onsuccess = (event) => {
+                    db = event.target.result;
+                    console.log('IndexedDB inicializado correctamente');
+                    resolve();
                 };
 
-                const transaction = db.transaction([STORE_NAME], 'readwrite');
-                const objectStore = transaction.objectStore(STORE_NAME);
-                const request = objectStore.add(doc);
-
-                request.onsuccess = function() {
-                    console.log('Documento guardado en IndexedDB:', docId);
+                request.onupgradeneeded = (event) => {
+                    db = event.target.result;
                     
-                    // Recargar la lista
-                    loadDocumentsList().then(() => {
-                        displayDocuments();
-                        
-                        // Resetear interfaz
-                        previewContainer.style.display = 'none';
-                        imagePreview.src = '';
-                        documentName.value = '';
-                        currentFile = null;
-                        fileInput.value = '';
-                        
-                        showNotification('Documento guardado correctamente');
-                    });
-                };
-
-                request.onerror = function(event) {
-                    console.error('Error al guardar documento:', event.target.error);
-                    showNotification('Error al guardar: ' + event.target.error.message, true);
-                    
-                    if (event.target.error.name === 'QuotaExceededError') {
-                        showNotification('Almacenamiento lleno. Elimina documentos antes de guardar.', true);
+                    // Crear object store si no existe
+                    if (!db.objectStoreNames.contains(CONFIG.storeName)) {
+                        const objectStore = db.createObjectStore(CONFIG.storeName, { keyPath: 'id' });
+                        objectStore.createIndex('name', 'name', { unique: false });
+                        objectStore.createIndex('date', 'date', { unique: false });
+                        objectStore.createIndex('category', 'category', { unique: false });
+                        objectStore.createIndex('type', 'type', { unique: false });
+                        console.log('Object store creado');
                     }
                 };
-
-                loader.style.display = 'none';
-            };
-
-            reader.onerror = function() {
-                console.error('Error al leer el archivo');
-                loader.style.display = 'none';
-                showNotification('Error al leer el archivo', true);
-            };
-
-            reader.readAsDataURL(currentFile);
-        }
-
-        // Función para mostrar los documentos en la interfaz
-        function displayDocuments() {
-            documentsContainer.innerHTML = '';
-
-            if (documentsList.length === 0) {
-                documentsContainer.innerHTML = `
-                    <div class="empty-state">
-                        <h3>No hay documentos</h3>
-                        <p>Sube una imagen o archivo PDF para empezar.</p>
-                    </div>
-                `;
-                return;
-            }
-
-            documentsList.sort((a, b) => new Date(b.date) - new Date(a.date));
-
-            documentsList.forEach(function(doc) {
-                const docItem = document.createElement('div');
-                docItem.className = 'document-item';
-
-                const date = new Date(doc.date);
-                const formattedDate = `${date.getDate()}-${date.getMonth() + 1}-${date.getFullYear()}`;
-                const formattedSize = formatFileSize(doc.size);
-
-                docItem.innerHTML = `
-                    <div class="document-title">${doc.name}</div>
-                    <div class="document-meta">
-                        Fecha: ${formattedDate} | Tamaño: ${formattedSize}
-                    </div>
-                    <div class="document-actions">
-                        <button onclick="viewDocument('${doc.id}')">Ver</button>
-                        <button class="success" onclick="downloadDocument('${doc.id}')">Descargar</button>
-                        <button class="danger" onclick="deleteDocument('${doc.id}')">Eliminar</button>
-                    </div>
-                `;
-
-                documentsContainer.appendChild(docItem);
             });
         }
 
-        // Función para ver un documento
-        function viewDocument(docId) {
-            loader.style.display = 'flex';
+        // Event Listeners
+        function setupEventListeners() {
+            // Archivo y cámara
+            elements.selectFileBtn.addEventListener('click', () => elements.fileInput.click());
+            elements.fileInput.addEventListener('change', handleFileSelection);
+            elements.takePhotoBtn.addEventListener('click', openCamera);
+            elements.capturePhotoBtn.addEventListener('click', capturePhoto);
+            elements.switchCameraBtn.addEventListener('click', switchCamera);
+            elements.closeCameraBtn.addEventListener('click', closeCamera);
 
-            const transaction = db.transaction([STORE_NAME], 'readonly');
-            const objectStore = transaction.objectStore(STORE_NAME);
-            const request = objectStore.get(docId);
+            // Vista previa y guardado
+            elements.createPdfBtn.addEventListener('click', saveDocument);
+            elements.cancelBtn.addEventListener('click', cancelPreview);
 
-            request.onsuccess = function(event) {
-                const doc = event.target.result;
-                if (!doc) {
-                    throw new Error('Documento no encontrado');
+            // Drag and drop
+            elements.uploadArea.addEventListener('dragover', handleDragOver);
+            elements.uploadArea.addEventListener('dragleave', handleDragLeave);
+            elements.uploadArea.addEventListener('drop', handleDrop);
+            elements.uploadArea.addEventListener('click', () => elements.fileInput.click());
+            elements.uploadArea.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter' || e.key === ' ') {
+                    e.preventDefault();
+                    elements.fileInput.click();
                 }
+            });
 
-                pdfFrame.src = doc.data;
-                pdfViewer.style.display = 'block';
-                loader.style.display = 'none';
-            };
+            // Búsqueda y filtros
+            elements.searchInput.addEventListener('input', debounce(handleSearch, 300));
+            elements.filterBtns.forEach(btn => {
+                btn.addEventListener('click', handleFilter);
+            });
 
-            request.onerror = function(event) {
-                console.error('Error al obtener documento:', event.target.error);
-                loader.style.display = 'none';
-                showNotification('Error al cargar documento', true);
-            };
+            // Gestión de documentos
+            elements.exportAllBtn.addEventListener('click', exportAllDocuments);
+            elements.clearAllBtn.addEventListener('click', clearAllDocuments);
+
+            // Modales
+            elements.closePdfViewer.addEventListener('click', closePdfViewer);
+            elements.pdfViewer.addEventListener('click', (e) => {
+                if (e.target === elements.pdfViewer) closePdfViewer();
+            });
+
+            // Teclado
+            document.addEventListener('keydown', handleKeyboard);
         }
 
-        // Función para descargar un documento
-        function downloadDocument(docId) {
-            loader.style.display = 'flex';
+        // Validación de archivos
+        function validateFile(file) {
+            const errors = [];
 
-            const transaction = db.transaction([STORE_NAME], 'readonly');
-            const objectStore = transaction.objectStore(STORE_NAME);
-            const request = objectStore.get(docId);
-
-            request.onsuccess = function(event) {
-                const doc = event.target.result;
-                if (!doc) {
-                    throw new Error('Documento no encontrado');
-                }
-
-                const extension = doc.type === 'application/pdf' ? '.pdf' : 
-                                doc.type === 'image/png' ? '.png' : '.jpg';
-
-                const a = document.createElement('a');
-                a.href = doc.data;
-                a.download = doc.name + extension;
-                document.body.appendChild(a);
-                a.click();
-                document.body.removeChild(a);
-
-                loader.style.display = 'none';
-            };
-
-            request.onerror = function(event) {
-                console.error('Error al obtener documento:', event.target.error);
-                loader.style.display = 'none';
-                showNotification('Error al descargar', true);
-            };
-        }
-
-        // Función para eliminar un documento
-        function deleteDocument(docId) {
-            if (!confirm('¿Estás seguro de que deseas eliminar este documento?')) {
-                return;
+            // Verificar tamaño
+            if (file.size > CONFIG.maxFileSize) {
+                errors.push(`El archivo es demasiado grande (máximo ${formatFileSize(CONFIG.maxFileSize)})`);
             }
 
-            loader.style.display = 'flex';
+            // Verificar tipo
+            const isImage = CONFIG.allowedImageTypes.includes(file.type);
+            const isPdf = CONFIG.allowedPdfTypes.includes(file.type);
+            
+            if (!isImage && !isPdf) {
+                errors.push('Tipo de archivo no admitido. Solo se permiten imágenes (JPG, PNG) y PDFs');
+            }
 
-            const transaction = db.transaction([STORE_NAME], 'readwrite');
-            const objectStore = transaction.objectStore(STORE_NAME);
-            const request = objectStore.delete(docId);
+            // Verificar tamaños específicos
+            if (isImage && file.size > CONFIG.maxImageSize) {
+                errors.push(`Imagen demasiado grande (máximo ${formatFileSize(CONFIG.maxImageSize)})`);
+            }
 
-            request.onsuccess = function() {
-                console.log('Documento eliminado:', docId);
-                loadDocumentsList().then(() => {
-                    displayDocuments();
-                    showNotification('Documento eliminado correctamente');
-                });
-            };
+            if (isPdf && file.size > CONFIG.maxPdfSize) {
+                errors.push(`PDF demasiado grande (máximo ${formatFileSize(CONFIG.maxPdfSize)})`);
+            }
 
-            request.onerror = function(event) {
-                console.error('Error al eliminar documento:', event.target.error);
-                showNotification('Error al eliminar: ' + event.target.error.message, true);
-            };
+            if (errors.length > 0) {
+                throw new Error(errors.join('. '));
+            }
 
-            loader.style.display = 'none';
+            return { isImage, isPdf };
         }
 
-        // Función para formatear el tamaño de archivo
-        function formatFileSize(bytes) {
-            if (bytes === 0) return '0 B';
-
-            const k = 1024;
-            const sizes = ['B', 'KB', 'MB', 'GB'];
-            const i = Math.floor(Math.log(bytes) / Math.log(k));
-
-            return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+        // Compresión de imágenes
+        function compressImage(file) {
+            return new Promise((resolve) => {
+                const canvas = document.createElement('canvas');
+                const ctx = canvas.getContext('2d');
+                const img = new Image();
+                
+                img.onload = () => {
+                    // Calcular nuevas dimensiones manteniendo aspect ratio
+                    let { width, height } = img;
+                    const maxWidth = CONFIG.maxImageWidth;
+                    const maxHeight = CONFIG.maxImageHeight;
+                    
+                    if (width > maxWidth || height > maxHeight) {
+                        const ratio = Math.min(maxWidth / width, maxHeight / height);
+                        width *= ratio;
+                        height *= ratio;
+                    }
+                    
+                    canvas.width = width;
+                    canvas.height = height;
+                    
+                    // Dibujar imagen redimensionada
+                    ctx.drawImage(img, 0, 0, width, height);
+                    
+                    // Convertir a blob
+                    canvas.toBlob(resolve, 'image/jpeg', CONFIG.imageCompressionQuality);
+                };
+                
+                img.src = URL.createObjectURL(file);
+            });
         }
 
-        // Hacer accesibles las funciones desde el HTML
-        window.viewDocument = viewDocument;
-        window.downloadDocument = downloadDocument;
-        window.deleteDocument = deleteDocument;
-    </script>
-</body>
-</html>
+        // Manejo de archivos
+        async function handleFileSelection() {
+            try {
+                const file = elements.fileInput.files[0];
+                if (!file) return;
+
+                const { isImage, isPdf } = validateFile(file);
